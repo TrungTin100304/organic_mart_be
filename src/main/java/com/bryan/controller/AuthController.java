@@ -53,7 +53,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("permitAll()")
     public ApiResponse<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ApiResponse.success(200, "Password reset successfully");

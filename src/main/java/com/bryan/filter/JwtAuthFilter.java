@@ -1,6 +1,7 @@
 package com.bryan.filter;
 
 import com.bryan.utils.JwtUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -17,7 +18,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -50,6 +53,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
                 String email = claims.getSubject();
                 Long userId = claims.get("id", Long.class);
+                if (userId == null) {
+                    throw new JwtException("User ID missing in token");
+                }
 
 
                 List<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
@@ -89,12 +95,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 .collect(Collectors.toList());
     }
 
+
     private void writeError(HttpServletResponse response, int status, String message)
             throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(
-                String.format("{\"success\":false,\"statusCode\":%d,\"message\":\"%s\"}", status, message)
-        );
+
+        Map<String, Object> errorResponse = new LinkedHashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("statusCode", status);
+        errorResponse.put("message", message);
+
+        ObjectMapper mapper = new ObjectMapper();
+        response.getWriter().write(mapper.writeValueAsString(errorResponse));
     }
 }
