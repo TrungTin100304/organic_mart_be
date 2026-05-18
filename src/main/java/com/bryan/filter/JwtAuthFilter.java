@@ -1,30 +1,24 @@
 package com.bryan.filter;
 
-import com.bryan.service.impl.CustomUserDetailsServiceImpl;
 import com.bryan.utils.JwtUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.crypto.SecretKey;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
@@ -32,14 +26,6 @@ import java.util.stream.Collectors;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
-    private final CustomUserDetailsServiceImpl userDetailsService;
-
-    @Value("${jwt.secret}")
-    private String secret;
-
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -57,51 +43,58 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
 
-            String email = claims.getSubject();
+            Claims claims = jwtUtils.validateAccessToken(token);
 
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Trích xuất roles từ Token thay vì phải query DB thông qua UserDetailsService
-                Object rolesObj = claims.get("roles");
-                List<SimpleGrantedAuthority> authorities = List.of();
-                if (rolesObj instanceof List<?>) {
-                    authorities = ((List<?>) rolesObj).stream()
-                            .filter(o -> o != null)
-                            .map(Object::toString)
-                            .map(SimpleGrantedAuthority::new)
-                            .collect(Collectors.toList());
-                }
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                String email = claims.getSubject();
+                Long userId = claims.get("id", Long.class);
 
-                // Nếu bạn vẫn cần load chi tiết UserDetails để lấy các logic Validate khác (như account lock, expired...)
-                // thì có thể dữ nguyên loadUserByUsername, nhưng việc lấy được Role từ Token giúp hệ thống Stateless 100% nếu muốn tối ưu
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                if (jwtUtils.isValid(token, userDetails)) {
-                    UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, authorities); // Chú ý: Inject `authorities` đã lấy từ claim ở token.
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                }
+                List<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
+
+                System.out.println(authorities.get(0).getAuthority());
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(email, null, authorities);
+
+
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
+
         } catch (ExpiredJwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"statusCode\":401,\"message\":\"Token expired\"}");
+            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expired");
             return;
         } catch (JwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"statusCode\":401,\"message\":\"Invalid token\"}");
+            writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
             return;
         }
 
         chain.doFilter(request, response);
+    }
+
+
+    @SuppressWarnings("unchecked")
+    private List<SimpleGrantedAuthority> extractAuthorities(Claims claims) {
+        Object rolesObj = claims.get("roles");
+        if (!(rolesObj instanceof List<?>)) return List.of();
+
+        return ((List<?>) rolesObj).stream()
+                .filter(Objects::nonNull)
+                .map(Object::toString)
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+    }
+
+    private void writeError(HttpServletResponse response, int status, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(
+                String.format("{\"success\":false,\"statusCode\":%d,\"message\":\"%s\"}", status, message)
+        );
     }
 }

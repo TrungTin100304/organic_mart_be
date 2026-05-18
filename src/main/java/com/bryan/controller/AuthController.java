@@ -22,7 +22,7 @@ public class AuthController {
     @PostMapping("/signup")
     @PreAuthorize("permitAll()")
     public ApiResponse<AuthResponse> signup(@Valid @RequestBody com.bryan.dto.request.SignupRequest request) {
-        return ApiResponse.success(201, authService.signup(request), "User registered successfully");
+        return ApiResponse.success(201, null, "User registered successfully");
     }
 
     @PostMapping("/login")
@@ -44,6 +44,7 @@ public class AuthController {
         return ApiResponse.success(200, "Logged out successfully");
     }
 
+
     @PostMapping("/forgot-password")
     @PreAuthorize("permitAll()")
     public ApiResponse<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
@@ -52,7 +53,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("hasRole('USER')")
     public ApiResponse<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ApiResponse.success(200, "Password reset successfully");

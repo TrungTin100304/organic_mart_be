@@ -6,6 +6,7 @@ import com.bryan.dto.request.RefreshTokenRequest;
 import com.bryan.dto.request.ResetPasswordRequest;
 import com.bryan.dto.response.AuthResponse;
 import com.bryan.entity.RefreshToken;
+import com.bryan.entity.Role;
 import com.bryan.entity.User;
 import com.bryan.exception.BadRequestException;
 import com.bryan.repository.RefreshTokenRepository;
@@ -51,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPhoneNumber(request.phoneNumber());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(com.bryan.entity.Role.USER);
+        user.setRole(Role.ROLE_USER);
 
         user = userRepository.save(user);
 
