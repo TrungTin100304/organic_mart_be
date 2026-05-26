@@ -34,3 +34,16 @@ build/
 
 ### Custom ###
 .env
+
+# >>> KNOWNS >>>
+# Managed by Knowns CLI — do not edit manually.
+# Run 'knowns init' to regenerate this block.
+.knowns/*
+!.knowns/config.json
+!.knowns/docs/
+!.knowns/docs/**
+!.knowns/templates/
+!.knowns/templates/**
+# <<< KNOWNS <<<
+/.github/
+/docs/

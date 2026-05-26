@@ -65,7 +65,7 @@ class AuthServiceImplTest {
         user.setId(1L);
         user.setEmail("test@gmail.com");
         user.setPasswordHash("hashed_password");
-        user.setRole(Role.USER);
+        user.setRole(Role.ROLE_USER);
     }
 
     @Test
@@ -156,7 +156,7 @@ class AuthServiceImplTest {
         ResetPasswordRequest req = new ResetPasswordRequest("valid_reset_token", "newPassword");
 
         when(userRepository.findByResetPasswordToken(req.token())).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode(req.newPassword())).thenReturn("new_hashed");
+        when(passwordEncoder.encode("newPassword")).thenReturn("new_hashed");
 
         authService.resetPassword(req);
 

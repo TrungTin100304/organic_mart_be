@@ -28,4 +28,3 @@ public class OpenApiConfig {
                 .info(new Info().title("Organic Mart API").version("v1"));
     }
 }
-

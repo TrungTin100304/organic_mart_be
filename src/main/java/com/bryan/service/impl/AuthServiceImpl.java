@@ -13,6 +13,7 @@ import com.bryan.repository.RefreshTokenRepository;
 import com.bryan.repository.UserRepository;
 import com.bryan.service.AuthService;
 import com.bryan.utils.JwtUtils;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -85,10 +86,20 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(accessToken, refreshToken, user.getEmail(), user.getRole().name());
     }
 
+
+
     @Override
     public AuthResponse refresh(RefreshTokenRequest request) {
+
+        try {
+            jwtUtils.validateRefreshToken(request.refreshToken());
+        } catch (JwtException e) {
+            throw new BadRequestException("Invalid refresh token: " + e.getMessage());
+        }
+
         RefreshToken saved = refreshTokenRepository.findByToken(request.refreshToken())
                 .orElseThrow(() -> new BadRequestException("Invalid refresh token"));
+
 
         if (saved.isExpired()) {
             refreshTokenRepository.delete(saved);
@@ -110,6 +121,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String refreshToken) {
+
+        try {
+            jwtUtils.extractEmail(refreshToken);
+        } catch (JwtException e) {
+            return;
+        }
+
         refreshTokenRepository.findByToken(refreshToken)
                 .ifPresent(refreshTokenRepository::delete);
     }

@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
             statusCode = 401; // Unauthorized
         }
 
-        return ResponseEntity.status(statusCode).body(ApiResponse.error(statusCode, ex.getMessage()));
+        return ApiResponse.error(statusCode, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -30,13 +30,11 @@ public class GlobalExceptionHandler {
         FieldError fieldError = ex.getBindingResult().getFieldError();
         String message = fieldError != null ? fieldError.getDefaultMessage() : "Dữ liệu không hợp lệ";
 
-        return ResponseEntity.status(400).body(ApiResponse.error(400, message));
+        return ApiResponse.error(400, message);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGlobalException(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(500, "Đã xảy ra lỗi trên hệ thống: " + ex.getMessage()));
+        return ApiResponse.error(500, "Đã xảy ra lỗi trên hệ thống: " + ex.getMessage());
     }
 }
-

@@ -1,0 +1,9 @@
+package com.bryan.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+
+public record AllergenRequest(
+    @NotBlank(message = "Allergen name is required")
+    String name
+) {}
+

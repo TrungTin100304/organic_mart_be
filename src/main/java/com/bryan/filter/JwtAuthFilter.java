@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.bryan.security.CustomUserDetails;
 
 @Component
 @RequiredArgsConstructor
@@ -57,14 +58,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     throw new JwtException("User ID missing in token");
                 }
 
-
                 List<SimpleGrantedAuthority> authorities = extractAuthorities(claims);
 
-                System.out.println(authorities.get(0).getAuthority());
+                CustomUserDetails userDetails = new CustomUserDetails(
+                        userId,
+                        email,
+                        null,
+                        authorities
+                );
 
                 UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(email, null, authorities);
-
+                        new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
 
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

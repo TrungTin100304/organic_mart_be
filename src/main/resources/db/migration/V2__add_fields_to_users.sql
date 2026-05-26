@@ -1,0 +1,5 @@
+ALTER TABLE users
+    ADD COLUMN avatar_url VARCHAR(255),
+    ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    ADD COLUMN updated_at TIMESTAMP;
+
