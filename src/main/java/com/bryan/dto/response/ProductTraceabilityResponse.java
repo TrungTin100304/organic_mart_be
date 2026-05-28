@@ -12,4 +12,3 @@ public record ProductTraceabilityResponse(
     BigDecimal totalQuantityRemaining,
     List<InventoryBatchResponse> batches
 ) {}
-

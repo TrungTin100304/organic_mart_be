@@ -55,4 +55,3 @@ public class InventoryBatchController {
         return ApiResponse.success(inventoryBatchService.getProductTraceability(productId));
     }
 }
-

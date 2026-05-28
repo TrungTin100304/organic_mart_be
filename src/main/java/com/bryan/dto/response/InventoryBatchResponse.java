@@ -19,4 +19,3 @@ public record InventoryBatchResponse(
     boolean expired,
     LocalDateTime createdAt
 ) {}
-

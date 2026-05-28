@@ -30,4 +30,3 @@ CREATE INDEX idx_batch_product ON inventory_batch(product_id);
 CREATE INDEX idx_batch_farm ON inventory_batch(farm_id);
 CREATE INDEX idx_batch_expiry_active ON inventory_batch(product_id, expiry_date)
     WHERE quantity_remaining > 0;
-

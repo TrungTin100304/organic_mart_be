@@ -14,4 +14,3 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
 
     boolean existsByBatchCodeAndIdNot(String batchCode, Long id);
 }
-

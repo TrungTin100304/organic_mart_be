@@ -21,4 +21,3 @@ public interface InventoryBatchService {
 
     ProductTraceabilityResponse getProductTraceability(Long productId);
 }
-

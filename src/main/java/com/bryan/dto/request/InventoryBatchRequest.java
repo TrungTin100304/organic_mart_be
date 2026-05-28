@@ -34,4 +34,3 @@ public record InventoryBatchRequest(
 
     BigDecimal costPrice
 ) {}
-

@@ -14,4 +14,3 @@ public record FarmRequest(
 
     String contactEmail
 ) {}
-

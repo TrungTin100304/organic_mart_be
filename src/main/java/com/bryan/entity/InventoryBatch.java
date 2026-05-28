@@ -55,4 +55,3 @@ public class InventoryBatch {
         return expiryDate != null && expiryDate.isBefore(LocalDate.now());
     }
 }
-

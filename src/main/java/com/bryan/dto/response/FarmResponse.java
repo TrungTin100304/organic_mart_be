@@ -11,4 +11,3 @@ public record FarmResponse(
     String contactEmail,
     LocalDateTime createdAt
 ) {}
-

@@ -29,4 +29,3 @@ public interface InventoryBatchMapper {
     @Mapping(target = "createdAt", ignore = true)
     void updateEntity(InventoryBatchRequest request, @MappingTarget InventoryBatch inventoryBatch);
 }
-

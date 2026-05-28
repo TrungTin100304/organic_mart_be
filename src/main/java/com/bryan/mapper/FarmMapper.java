@@ -22,4 +22,3 @@ public interface FarmMapper {
     @Mapping(target = "createdAt", ignore = true)
     void updateEntity(FarmRequest request, @MappingTarget Farm farm);
 }
-
