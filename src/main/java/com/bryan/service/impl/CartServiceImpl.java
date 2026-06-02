@@ -65,15 +65,9 @@ public class CartServiceImpl implements CartService {
         Cart cart = getOrCreateCart(user);
 
         CartItem item = findItem(cart, productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product with id: " + productId + " not found in cart"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product with id: " + productId + " is not in your cart"));
 
-        BigDecimal currentQuantityInCart = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ZERO;
-
-        BigDecimal targetQuantity = currentQuantityInCart.subtract(request.quantity());
-
-        if (targetQuantity.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BadRequestException("Số lượng trong giỏ không đủ để giảm thêm");
-        }
+        BigDecimal targetQuantity = request.quantity();
 
         if (targetQuantity.compareTo(BigDecimal.ZERO) == 0) {
             cart.removeItem(item);
@@ -102,7 +96,7 @@ public class CartServiceImpl implements CartService {
     public CartResponse clearCart() {
         User user = getAuthenticatedUser();
         Cart cart = getOrCreateCart(user);
-        cart.getItems().clear();
+        cart.getItems().forEach(cart::removeItem);
         touchAndSave(cart);
         return cartMapper.toResponse(cart);
     }
