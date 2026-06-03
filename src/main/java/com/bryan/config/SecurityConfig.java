@@ -84,7 +84,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:8080",
-                "https://organic-mart-five.vercel.app"
+                "https://organic-mart-fe-bu3b-14eowwqow-bryan-s-projects12.vercel.app"
             
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
