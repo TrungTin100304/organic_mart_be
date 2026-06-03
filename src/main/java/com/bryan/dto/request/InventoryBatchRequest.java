@@ -9,27 +9,27 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record InventoryBatchRequest(
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
     Long productId,
 
-    @NotNull(message = "Farm ID is required")
+    @NotNull(message = "ID trang trại là bắt buộc")
     Long farmId,
 
-    @NotBlank(message = "Batch code is required")
+    @NotBlank(message = "Mã lô hàng là bắt buộc")
     String batchCode,
 
-    @NotNull(message = "Quantity initial is required")
-    @Positive(message = "Quantity initial must be greater than 0")
+    @NotNull(message = "Số lượng ban đầu là bắt buộc")
+    @Positive(message = "Số lượng ban đầu phải lớn hơn 0")
     BigDecimal quantityInitial,
 
-    @NotNull(message = "Quantity remaining is required")
-    @PositiveOrZero(message = "Quantity remaining must be greater than or equal to 0")
+    @NotNull(message = "Số lượng còn lại là bắt buộc")
+    @PositiveOrZero(message = "Số lượng còn lại phải lớn hơn hoặc bằng 0")
     BigDecimal quantityRemaining,
 
-    @NotNull(message = "Import date is required")
+    @NotNull(message = "Ngày nhập kho là bắt buộc")
     LocalDate importDate,
 
-    @NotNull(message = "Expiry date is required")
+    @NotNull(message = "Ngày hết hạn là bắt buộc")
     LocalDate expiryDate,
 
     BigDecimal costPrice
