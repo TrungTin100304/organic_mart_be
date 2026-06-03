@@ -4,7 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.multipart.MultipartFile;
 
 public record UserUpdateRequest(
-    @NotBlank String fullName,
+    @NotBlank(message = "Họ tên là bắt buộc")
+    String fullName,
     String phoneNumber,
     MultipartFile avatar
 ) {}
