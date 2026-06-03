@@ -85,6 +85,7 @@ public class SecurityConfig {
                 "http://localhost:3001",
                 "http://localhost:8080",
                 "https://organic-mart-fe-bu3b.vercel.app",
+                "https://*.vercel.app",
                 "https://organic-mart-fe-bu3b-14eowwqow-bryan-s-projects12.vercel.app"
             
         ));
