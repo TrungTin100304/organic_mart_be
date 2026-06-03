@@ -9,10 +9,10 @@ import java.util.Set;
 import org.springframework.web.multipart.MultipartFile;
 
 public record ProductRequest(
-    @NotBlank(message = "Product name is required")
+    @NotBlank(message = "Tên sản phẩm là bắt buộc")
     String name,
 
-    @NotNull(message = "Category ID is required")
+    @NotNull(message = "ID danh mục là bắt buộc")
     Long categoryId,
 
     String description,
@@ -21,8 +21,8 @@ public record ProductRequest(
 
     String detailedDescription,
 
-    @NotNull(message = "Price is required")
-    @PositiveOrZero(message = "Price must be positive or zero")
+    @NotNull(message = "Giá là bắt buộc")
+    @PositiveOrZero(message = "Giá phải lớn hơn hoặc bằng 0")
     BigDecimal price,
 
     String unit,

@@ -6,10 +6,10 @@ import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 
 public record AddCartItemRequest(
-    @NotNull(message = "Product ID is required")
+    @NotNull(message = "ID sản phẩm là bắt buộc")
     Long productId,
 
-    @NotNull(message = "Quantity is required")
-    @Positive(message = "Quantity must be greater than 0")
+    @NotNull(message = "Số lượng là bắt buộc")
+    @Positive(message = "Số lượng phải lớn hơn 0")
     BigDecimal quantity
 ) {}
