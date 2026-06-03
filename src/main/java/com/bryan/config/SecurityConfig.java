@@ -77,22 +77,26 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(
-                "http://127.0.0.1:5500",
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:8080",
-                "https://organic-mart-fe-bu3b.vercel.app",
+
+        config.setAllowedOriginPatterns(List.of(
                 "https://*.vercel.app",
-                "https://organic-mart-fe-bu3b-14eowwqow-bryan-s-projects12.vercel.app"
-            
+                "http://localhost:*",
+                "http://127.0.0.1:*"
         ));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+        ));
+
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
 }
