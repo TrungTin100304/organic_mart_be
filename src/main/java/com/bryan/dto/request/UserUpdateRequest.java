@@ -7,5 +7,8 @@ public record UserUpdateRequest(
     @NotBlank(message = "Họ tên là bắt buộc")
     String fullName,
     String phoneNumber,
-    MultipartFile avatar
+    MultipartFile avatar,
+    Boolean isActive,
+    Boolean active,
+    String status
 ) {}

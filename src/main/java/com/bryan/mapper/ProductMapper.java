@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring", uses = {ProductCategoryMapper.class, AllergenMapper.class})
 public interface ProductMapper {
 
+    @Mapping(source = "active", target = "isActive")
     ProductResponse toResponse(Product product);
 
     @Mapping(target = "id", ignore = true)

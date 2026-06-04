@@ -1,6 +1,7 @@
 package com.bryan.controller;
 
 import com.bryan.dto.request.UserUpdateRequest;
+import com.bryan.dto.request.UserStatusRequest;
 import com.bryan.dto.response.ApiResponse;
 import com.bryan.dto.response.UserResponse;
 import com.bryan.service.UserService;
@@ -49,6 +50,12 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserResponse>> updateUser(@PathVariable Long id, @Valid @ModelAttribute UserUpdateRequest request) {
         return ApiResponse.success(userService.updateUser(id, request));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserStatus(@PathVariable Long id, @RequestBody UserStatusRequest request) {
+        return ApiResponse.success(userService.updateUserStatus(id, request));
     }
 
     @DeleteMapping("/{id}")
