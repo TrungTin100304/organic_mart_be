@@ -1,6 +1,7 @@
 package com.bryan.service;
 
 import com.bryan.dto.request.UserUpdateRequest;
+import com.bryan.dto.request.UserStatusRequest;
 import com.bryan.dto.response.UserResponse;
 
 import java.util.List;
@@ -11,6 +12,7 @@ public interface UserService {
     UserResponse getCurrentUser();
     UserResponse updateCurrentUser(UserUpdateRequest request);
     UserResponse updateUser(Long id, UserUpdateRequest request);
+    UserResponse updateUserStatus(Long id, UserStatusRequest request);
     void deleteUser(Long id);
 }
 

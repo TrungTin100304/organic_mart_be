@@ -10,8 +10,10 @@ import org.mapstruct.MappingTarget;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
+    @Mapping(source = "active", target = "isActive")
     UserResponse toResponse(User user);
 
     @Mapping(target = "avatarUrl", ignore = true)
+    @Mapping(target = "active", ignore = true)
     void updateUser(UserUpdateRequest request, @MappingTarget User user);
 }

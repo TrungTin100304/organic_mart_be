@@ -1,8 +1,10 @@
 package com.bryan.service.impl;
 
 import com.bryan.dto.request.UserUpdateRequest;
+import com.bryan.dto.request.UserStatusRequest;
 import com.bryan.dto.response.UserResponse;
 import com.bryan.entity.User;
+import com.bryan.exception.BadRequestException;
 import com.bryan.exception.ResourceNotFoundException;
 import com.bryan.mapper.UserMapper;
 import com.bryan.repository.UserRepository;
@@ -64,12 +66,23 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = findUserById(id);
         userMapper.updateUser(request, user);
+        resolveActiveStatus(request.isActive(), request.active(), request.status())
+                .ifPresent(user::setActive);
 
         if (request.avatar() != null && !request.avatar().isEmpty()) {
             String avatarUrl = fileUploadService.uploadFile(request.avatar());
             user.setAvatarUrl(avatarUrl);
         }
 
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    public UserResponse updateUserStatus(Long id, UserStatusRequest request) {
+        User user = findUserById(id);
+        Boolean active = resolveActiveStatus(request.isActive(), request.active(), request.status())
+                .orElseThrow(() -> new BadRequestException("User status is required"));
+        user.setActive(active);
         return userMapper.toResponse(userRepository.save(user));
     }
 
@@ -84,6 +97,24 @@ public class UserServiceImpl implements UserService {
     private User findUserById(Long id) {
         return userRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    private java.util.Optional<Boolean> resolveActiveStatus(Boolean isActive, Boolean active, String status) {
+        if (isActive != null) {
+            return java.util.Optional.of(isActive);
+        }
+        if (active != null) {
+            return java.util.Optional.of(active);
+        }
+        if (status == null || status.isBlank()) {
+            return java.util.Optional.empty();
+        }
+
+        return switch (status.trim().toLowerCase()) {
+            case "active", "enabled", "enable", "true" -> java.util.Optional.of(true);
+            case "inactive", "locked", "disabled", "disable", "false" -> java.util.Optional.of(false);
+            default -> throw new BadRequestException("Unsupported user status: " + status);
+        };
     }
 
     private User getAuthenticatedUser() {
