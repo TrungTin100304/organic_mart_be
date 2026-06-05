@@ -66,6 +66,9 @@ public class Order {
     @Column(name = "shipping_address_snapshot", nullable = false, columnDefinition = "TEXT")
     private String shippingAddressSnapshot;
 
+    @Column(name = "shipping_provider_name_snapshot", length = 100)
+    private String shippingProviderNameSnapshot;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderDetail> details = new ArrayList<>();
 

@@ -15,6 +15,7 @@ public record OrderResponse(
     String shippingRecipientSnapshot,
     String shippingPhoneSnapshot,
     String shippingAddressSnapshot,
+    String shippingProviderNameSnapshot,
     PromotionSnapshotResponse promotion,
     BigDecimal subtotal,
     BigDecimal discountAmount,

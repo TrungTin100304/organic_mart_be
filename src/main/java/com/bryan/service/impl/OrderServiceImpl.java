@@ -11,6 +11,7 @@ import com.bryan.mapper.OrderMapper;
 import com.bryan.repository.*;
 import com.bryan.security.CustomUserDetails;
 import com.bryan.service.OrderService;
+import com.bryan.repository.ShippingProviderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,9 +37,9 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final UserAddressRepository userAddressRepository;
-    private final ProductRepository productRepository;
     private final InventoryBatchRepository batchRepository;
     private final PromotionRepository promotionRepository;
+    private final ShippingProviderRepository shippingProviderRepository;
     private final OrderMapper orderMapper;
 
     @Override
@@ -95,8 +96,15 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Address does not belong to the current user");
         }
 
+        ShippingProvider provider = shippingProviderRepository.findById(request.shippingProviderId())
+            .orElseThrow(() -> new ResourceNotFoundException("Shipping provider not found with id: " + request.shippingProviderId()));
+
+        if (!provider.getIsActive()) {
+            throw new BadRequestException("Shipping provider is not active");
+        }
+
         BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal shippingFee = new BigDecimal("30000.00");
+        BigDecimal shippingFee = request.shippingFee();
         BigDecimal discountAmount = BigDecimal.ZERO;
         Promotion promotion = null;
 
@@ -142,6 +150,7 @@ public class OrderServiceImpl implements OrderService {
         order.setShippingRecipientSnapshot(address.getRecipientName());
         order.setShippingPhoneSnapshot(address.getRecipientPhone());
         order.setShippingAddressSnapshot(buildFullAddress(address));
+        order.setShippingProviderNameSnapshot(provider.getName());
 
         for (CartItem cartItem : cart.getItems()) {
             Product product = cartItem.getProduct();
@@ -275,6 +284,7 @@ public class OrderServiceImpl implements OrderService {
             response.shippingRecipientSnapshot(),
             response.shippingPhoneSnapshot(),
             response.shippingAddressSnapshot(),
+            order.getShippingProviderNameSnapshot(),
             promo,
             response.subtotal(),
             response.discountAmount(),
