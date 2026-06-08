@@ -15,9 +15,13 @@ public record OrderDetailResponse(
     BigDecimal quantity,
     String unit,
     BigDecimal priceAtPurchase,
-    BigDecimal lineSubtotal
+    BigDecimal lineSubtotal,
+    OrderItemProductResponse product
 ) {
     public static OrderDetailResponse from(OrderDetail detail) {
+        if (detail == null) {
+            return null;
+        }
         return new OrderDetailResponse(
             detail.getId(),
             detail.getProduct() != null ? detail.getProduct().getId() : null,
@@ -29,7 +33,8 @@ public record OrderDetailResponse(
             detail.getQuantity(),
             detail.getProduct() != null ? detail.getProduct().getUnit() : null,
             detail.getPriceAtPurchase(),
-            detail.getLineSubtotal()
+            detail.getLineSubtotal(),
+            OrderItemProductResponse.from(detail.getProduct())
         );
     }
 }
