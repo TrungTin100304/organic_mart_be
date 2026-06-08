@@ -1,13 +1,9 @@
 package com.bryan.mapper;
 
-import com.bryan.dto.response.OrderDetailResponse;
 import com.bryan.dto.response.OrderResponse;
-import com.bryan.dto.response.OrderStatusHistoryResponse;
 import com.bryan.entity.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-
-import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface OrderMapper {
@@ -30,8 +26,4 @@ public interface OrderMapper {
     @Mapping(source = "createdAt", target = "createdAt")
     @Mapping(source = "updatedAt", target = "updatedAt")
     OrderResponse toResponse(Order order);
-
-    List<OrderDetailResponse> mapDetails(List<OrderDetailResponse> details);
-
-    List<OrderStatusHistoryResponse> mapHistories(List<OrderStatusHistoryResponse> histories);
 }
