@@ -16,4 +16,6 @@ public interface PromotionUsageRepository extends JpaRepository<PromotionUsage, 
     long countByPromotionId(Long promotionId);
 
     long countByPromotionIdAndUserId(Long promotionId, Long userId);
+
+    Optional<PromotionUsage> findByPaymentRequestId(Long paymentRequestId);
 }

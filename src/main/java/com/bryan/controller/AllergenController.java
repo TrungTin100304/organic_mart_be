@@ -9,6 +9,7 @@ import com.bryan.service.AllergenService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,18 +32,21 @@ public class AllergenController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<AllergenResponse>> createAllergen(@Valid @RequestBody AllergenRequest request) {
         Allergen createdAllergen = allergenService.createAllergen(request.name());
         return ApiResponse.success(201, allergenMapper.toResponse(createdAllergen));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<AllergenResponse>> updateAllergen(@PathVariable Long id, @Valid @RequestBody AllergenRequest request) {
         Allergen updatedAllergen = allergenService.updateAllergen(id, request.name());
         return ApiResponse.success(allergenMapper.toResponse(updatedAllergen));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteAllergen(@PathVariable Long id) {
         allergenService.deleteAllergen(id);
         return ApiResponse.success(null, "Allergen deleted successfully");

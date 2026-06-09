@@ -8,6 +8,8 @@ import com.bryan.entity.User;
 import com.bryan.exception.BadRequestException;
 import com.bryan.mapper.UserMapper;
 import com.bryan.repository.UserRepository;
+import com.bryan.security.CustomUserDetails;
+import com.bryan.service.AuditLogService;
 import com.bryan.service.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -25,6 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.eq;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -38,6 +50,9 @@ class UserServiceImplTest {
     @Mock
     private FileUploadService fileUploadService;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -45,6 +60,7 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.clearContext();
         user = new User();
         user.setId(1L);
         user.setFullName("Customer");
@@ -52,6 +68,11 @@ class UserServiceImplTest {
         user.setEmail("customer@test.dev");
         user.setRole(Role.ROLE_USER);
         user.setActive(true);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -90,6 +111,80 @@ class UserServiceImplTest {
 
         assertThrows(BadRequestException.class, () ->
                 userService.updateUserStatus(1L, new UserStatusRequest(null, null, "paused")));
+    }
+
+    @Test
+    void shouldKeepExistingAvatarWhenUpdateDoesNotContainNewFile() {
+        user.setAvatarUrl("https://res.cloudinary.com/demo/existing.jpg");
+        UserUpdateRequest request = new UserUpdateRequest("Customer", "0909000000", null, null, null, null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        doAnswer(invocation -> null).when(userMapper).updateUser(request, user);
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenAnswer(invocation -> toResponse(invocation.getArgument(0)));
+
+        UserResponse response = userService.updateUser(1L, request);
+
+        assertTrue(response.avatarUrl().endsWith("/existing.jpg"));
+        verifyNoInteractions(fileUploadService);
+    }
+
+    @Test
+    void shouldUploadNewAvatarToAvatarsFolder() {
+        MockMultipartFile avatar = new MockMultipartFile(
+                "avatar", "avatar.webp", "image/webp",
+                new byte[] {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'});
+        UserUpdateRequest request = new UserUpdateRequest("Customer", "0909000000", avatar, null, null, null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        doAnswer(invocation -> null).when(userMapper).updateUser(request, user);
+        when(fileUploadService.uploadFile(avatar, "organic-mart/avatars"))
+                .thenReturn("https://res.cloudinary.com/demo/avatar.webp");
+        when(userRepository.save(user)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenAnswer(invocation -> toResponse(invocation.getArgument(0)));
+
+        UserResponse response = userService.updateUser(1L, request);
+
+        assertTrue(response.avatarUrl().endsWith("/avatar.webp"));
+        verify(fileUploadService).uploadFile(avatar, "organic-mart/avatars");
+    }
+
+    @Test
+    void shouldPreventAdminFromLockingOwnAccount() {
+        authenticateAs(1L);
+
+        assertThrows(BadRequestException.class, () ->
+                userService.updateUserStatus(1L, new UserStatusRequest(false, null, null)));
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void shouldPreventAdminFromDeletingOwnAccount() {
+        authenticateAs(1L);
+
+        assertThrows(BadRequestException.class, () -> userService.deleteUser(1L));
+
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void shouldUseDynamicSpecificationWhenAdminUserFiltersAreEmpty() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(userRepository.findAll(any(Specification.class), eq(pageable)))
+                .thenReturn(new PageImpl<>(java.util.List.of(), pageable, 0));
+
+        userService.searchUsers(null, null, null, pageable);
+
+        verify(userRepository).findAll(any(Specification.class), eq(pageable));
+    }
+
+    private void authenticateAs(Long id) {
+        CustomUserDetails principal = new CustomUserDetails(
+                id,
+                "admin@test.dev",
+                "password",
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
     private UserResponse toResponse(User updated) {

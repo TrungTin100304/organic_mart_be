@@ -56,7 +56,7 @@ public class ProductServiceImpl implements ProductService {
 
         String imageUrl = null;
         if (request.imageFile() != null && !request.imageFile().isEmpty()) {
-            imageUrl = fileUploadService.uploadFile(request.imageFile());
+            imageUrl = fileUploadService.uploadFile(request.imageFile(), "organic-mart/products");
         }
 
         Product product = new Product();
@@ -90,7 +90,7 @@ public class ProductServiceImpl implements ProductService {
 
         String imageUrl = existingProduct.getImageUrl();
         if (request.imageFile() != null && !request.imageFile().isEmpty()) {
-            imageUrl = fileUploadService.uploadFile(request.imageFile());
+            imageUrl = fileUploadService.uploadFile(request.imageFile(), "organic-mart/products");
         }
 
         existingProduct.setName(request.name());

@@ -12,5 +12,8 @@ public record VietQrPaymentResponse(
     String bankId,
     String accountNo,
     String accountName,
-    LocalDateTime expiresAt
+    LocalDateTime expiresAt,
+    LocalDateTime paidAt,
+    Long orderId,
+    String orderCode
 ) {}

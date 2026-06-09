@@ -12,6 +12,9 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface UserAddressMapper {
 
+    @Mapping(source = "building.id", target = "buildingId")
+    @Mapping(source = "building.code", target = "buildingCode")
+    @Mapping(source = "building.name", target = "buildingName")
     UserAddressResponse toResponse(UserAddress userAddress);
 
     List<UserAddressResponse> toResponseList(List<UserAddress> userAddresses);
@@ -19,10 +22,12 @@ public interface UserAddressMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "building", ignore = true)
     UserAddress toEntity(UserAddressRequest request);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "building", ignore = true)
     void updateEntityFromRequest(UserAddressRequest request, @MappingTarget UserAddress userAddress);
 }

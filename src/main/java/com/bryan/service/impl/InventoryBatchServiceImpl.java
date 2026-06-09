@@ -72,8 +72,9 @@ public class InventoryBatchServiceImpl implements InventoryBatchService {
 
     @Override
     public void deleteBatch(Long id) {
-        if (!inventoryBatchRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Inventory batch not found with id: " + id);
+        InventoryBatch batch = getBatchEntityById(id);
+        if (batch.getQuantityInitial().compareTo(batch.getQuantityRemaining()) != 0) {
+            throw new BadRequestException("Cannot delete a batch that already has inventory movement history");
         }
         inventoryBatchRepository.deleteById(id);
     }

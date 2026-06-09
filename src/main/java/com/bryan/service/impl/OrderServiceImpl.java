@@ -1,5 +1,6 @@
 package com.bryan.service.impl;
 
+import com.bryan.config.InternalDeliveryProperties;
 import com.bryan.dto.request.CreateOrderRequest;
 import com.bryan.dto.request.UpdateOrderStatusRequest;
 import com.bryan.dto.response.OrderListResponse;
@@ -11,7 +12,6 @@ import com.bryan.mapper.OrderMapper;
 import com.bryan.repository.*;
 import com.bryan.security.CustomUserDetails;
 import com.bryan.service.OrderService;
-import com.bryan.repository.ShippingProviderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,13 +39,15 @@ public class OrderServiceImpl implements OrderService {
     private final UserAddressRepository userAddressRepository;
     private final InventoryBatchRepository batchRepository;
     private final PromotionRepository promotionRepository;
-    private final ShippingProviderRepository shippingProviderRepository;
+    private final DeliverySlotRepository deliverySlotRepository;
     private final OrderMapper orderMapper;
+    private final InternalDeliveryProperties deliveryProperties;
 
     @Override
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
         Order order = findOrderById(id);
+        authorizeOrderRead(order);
         return mapToResponse(order);
     }
 
@@ -54,6 +56,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse getOrderByCode(String orderCode) {
         Order order = orderRepository.findByOrderCode(orderCode)
             .orElseThrow(() -> new ResourceNotFoundException("Order not found with code: " + orderCode));
+        authorizeOrderRead(order);
         return mapToResponse(order);
     }
 
@@ -96,26 +99,21 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Address does not belong to the current user");
         }
 
-        ShippingProvider provider = shippingProviderRepository.findById(request.shippingProviderId())
-            .orElseThrow(() -> new ResourceNotFoundException("Shipping provider not found with id: " + request.shippingProviderId()));
+        validateInternalDeliveryAddress(address, request.deliveryMethod());
+        validateDeliverySlot(request, address);
 
-        if (!provider.getIsActive()) {
-            throw new BadRequestException("Shipping provider is not active");
-        }
-
+        BigDecimal shippingFee = calculateShippingFee(request.deliveryMethod());
         BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal shippingFee = request.shippingFee();
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        Promotion promotion = null;
-
         for (CartItem cartItem : cart.getItems()) {
             BigDecimal price = cartItem.getProduct().getPrice();
             BigDecimal itemSubtotal = price.multiply(cartItem.getQuantity());
             subtotal = subtotal.add(itemSubtotal);
         }
 
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        Promotion promotion = null;
         if (request.promotionCode() != null && !request.promotionCode().isBlank()) {
-             promotion = promotionRepository.findByCode(request.promotionCode())
+            promotion = promotionRepository.findByCode(request.promotionCode())
                 .filter(Promotion::isActive)
                 .filter(p -> {
                     LocalDate now = LocalDate.now();
@@ -127,7 +125,6 @@ public class OrderServiceImpl implements OrderService {
                 subtotal.compareTo(promotion.getMinOrderAmount()) < 0) {
                 throw new BadRequestException("Order amount does not meet minimum requirement for this promotion");
             }
-
             discountAmount = calculateDiscount(promotion, subtotal);
         }
 
@@ -135,6 +132,18 @@ public class OrderServiceImpl implements OrderService {
         if (totalAmount.compareTo(BigDecimal.ZERO) < 0) {
             totalAmount = BigDecimal.ZERO;
         }
+
+        String slotSnapshot = null;
+        if (request.deliverySlotId() != null) {
+            DeliverySlot slot = deliverySlotRepository.findById(request.deliverySlotId()).orElse(null);
+            if (slot != null) {
+                slotSnapshot = slot.getName();
+            }
+        }
+
+        ResidentialBuilding building = address.getBuilding();
+        String buildingCode = building != null ? building.getCode() : null;
+        String buildingName = building != null ? building.getName() : null;
 
         Order order = new Order();
         order.setUser(user);
@@ -147,10 +156,22 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
         order.setStatus(OrderStatus.PENDING);
         order.setNote(request.note());
+        order.setDeliveryMethod(request.deliveryMethod());
+        order.setDeliveryDate(request.deliveryDate());
+        order.setDeliverySlotId(request.deliverySlotId());
+        order.setDeliverySlotSnapshot(slotSnapshot);
+        order.setBuildingCodeSnapshot(buildingCode);
+        order.setBuildingNameSnapshot(buildingName);
+        order.setFloorSnapshot(address.getFloor());
+        order.setApartmentNumberSnapshot(address.getApartmentNumber());
+        order.setRecipientNameSnapshot(address.getRecipientName());
+        order.setRecipientPhoneSnapshot(address.getRecipientPhone());
+        order.setDeliveryNoteSnapshot(address.getDeliveryNote());
+        // Legacy snapshots for backward compatibility
         order.setShippingRecipientSnapshot(address.getRecipientName());
         order.setShippingPhoneSnapshot(address.getRecipientPhone());
         order.setShippingAddressSnapshot(buildFullAddress(address));
-        order.setShippingProviderNameSnapshot(provider.getName());
+        order.setShippingProviderNameSnapshot(null);
 
         for (CartItem cartItem : cart.getItems()) {
             Product product = cartItem.getProduct();
@@ -254,6 +275,57 @@ public class OrderServiceImpl implements OrderService {
             .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
     }
 
+    private void validateInternalDeliveryAddress(UserAddress address, DeliveryMethod method) {
+        ResidentialBuilding building = address.getBuilding();
+        if (building == null || !building.getIsActive()) {
+            throw new BadRequestException(
+                "Address must have an active building selected for internal delivery. Please update your address.");
+        }
+        if (address.getFloor() == null || address.getFloor().isBlank()) {
+            throw new BadRequestException("Floor information is required for internal delivery address.");
+        }
+        if (address.getApartmentNumber() == null || address.getApartmentNumber().isBlank()) {
+            throw new BadRequestException("Apartment number is required for internal delivery address.");
+        }
+        if (address.getRecipientName() == null || address.getRecipientName().isBlank()) {
+            throw new BadRequestException("Recipient name is required.");
+        }
+        if (address.getRecipientPhone() == null || address.getRecipientPhone().isBlank()) {
+            throw new BadRequestException("Recipient phone is required.");
+        }
+    }
+
+    private void validateDeliverySlot(CreateOrderRequest request, UserAddress address) {
+        if (request.deliveryMethod() == DeliveryMethod.SCHEDULED) {
+            if (request.deliveryDate() == null) {
+                throw new BadRequestException("Delivery date is required for SCHEDULED delivery.");
+            }
+            if (request.deliveryDate().isBefore(LocalDate.now())) {
+                throw new BadRequestException("Delivery date cannot be in the past.");
+            }
+            if (request.deliverySlotId() == null) {
+                throw new BadRequestException("Delivery slot is required for SCHEDULED delivery.");
+            }
+            DeliverySlot slot = deliverySlotRepository.findById(request.deliverySlotId())
+                .orElseThrow(() -> new BadRequestException("Delivery slot not found: " + request.deliverySlotId()));
+            if (!slot.getIsActive()) {
+                throw new BadRequestException("Delivery slot is not active: " + slot.getName());
+            }
+            long currentCount = deliverySlotRepository.countOrdersForSlotOnDate(slot.getId(), request.deliveryDate());
+            if (currentCount >= slot.getMaximumOrders()) {
+                throw new BadRequestException("Delivery slot is full: " + slot.getName());
+            }
+        }
+    }
+
+    private BigDecimal calculateShippingFee(DeliveryMethod method) {
+        return switch (method) {
+            case STANDARD -> deliveryProperties.getStandardFee();
+            case EXPRESS -> deliveryProperties.getExpressFee();
+            case SCHEDULED -> deliveryProperties.getScheduledFee();
+        };
+    }
+
     private OrderResponse mapToResponse(Order order) {
         OrderResponse response = orderMapper.toResponse(order);
 
@@ -284,7 +356,7 @@ public class OrderServiceImpl implements OrderService {
             response.shippingRecipientSnapshot(),
             response.shippingPhoneSnapshot(),
             response.shippingAddressSnapshot(),
-            order.getShippingProviderNameSnapshot(),
+            response.shippingProviderNameSnapshot(),
             promo,
             response.subtotal(),
             response.discountAmount(),
@@ -295,7 +367,18 @@ public class OrderServiceImpl implements OrderService {
             details,
             histories,
             response.createdAt(),
-            response.updatedAt()
+            response.updatedAt(),
+            response.deliveryMethod(),
+            response.deliveryDate(),
+            response.deliverySlotId(),
+            response.deliverySlotSnapshot(),
+            response.buildingCodeSnapshot(),
+            response.buildingNameSnapshot(),
+            response.floorSnapshot(),
+            response.apartmentNumberSnapshot(),
+            response.recipientNameSnapshot(),
+            response.recipientPhoneSnapshot(),
+            response.deliveryNoteSnapshot()
         );
     }
 
@@ -324,18 +407,15 @@ public class OrderServiceImpl implements OrderService {
 
     private String buildFullAddress(UserAddress address) {
         StringBuilder sb = new StringBuilder();
-        if (address.getFullAddress() != null) sb.append(address.getFullAddress());
-        if (address.getWard() != null) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(address.getWard());
-        }
-        if (address.getDistrict() != null) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(address.getDistrict());
-        }
-        if (address.getCity() != null) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(address.getCity());
+        if (address.getBuilding() != null) {
+            sb.append("Căn hộ ").append(address.getApartmentNumber())
+              .append(", tầng ").append(address.getFloor())
+              .append(", tòa ").append(address.getBuilding().getCode());
+        } else {
+            if (address.getFullAddress() != null) sb.append(address.getFullAddress());
+            if (address.getWard() != null) { if (sb.length() > 0) sb.append(", "); sb.append(address.getWard()); }
+            if (address.getDistrict() != null) { if (sb.length() > 0) sb.append(", "); sb.append(address.getDistrict()); }
+            if (address.getCity() != null) { if (sb.length() > 0) sb.append(", "); sb.append(address.getCity()); }
         }
         return sb.toString();
     }
@@ -344,9 +424,10 @@ public class OrderServiceImpl implements OrderService {
         boolean valid = switch (to) {
             case PENDING -> false;
             case CONFIRMED -> from == OrderStatus.PENDING;
-            case PROCESSING -> from == OrderStatus.CONFIRMED;
-            case SHIPPED -> from == OrderStatus.PROCESSING;
-            case DELIVERED -> from == OrderStatus.SHIPPED;
+            case PREPARING -> from == OrderStatus.CONFIRMED;
+            case READY_FOR_DELIVERY -> from == OrderStatus.PREPARING;
+            case DELIVERING -> from == OrderStatus.READY_FOR_DELIVERY;
+            case DELIVERED -> from == OrderStatus.DELIVERING;
             case CANCELLED -> from == OrderStatus.PENDING || from == OrderStatus.CONFIRMED;
             case REFUNDED -> from == OrderStatus.DELIVERED || from == OrderStatus.CANCELLED;
         };
@@ -362,6 +443,19 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Authentication required");
         }
         return ud.getId();
+    }
+
+    private void authorizeOrderRead(Order order) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            throw new BadRequestException("Authentication required");
+        }
+        boolean admin = auth.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        Long ownerId = order.getUser() != null ? order.getUser().getId() : null;
+        if (!admin && !userDetails.getId().equals(ownerId)) {
+            throw new BadRequestException("You can only view your own orders");
+        }
     }
 
     private User getAuthenticatedUserEntity() {

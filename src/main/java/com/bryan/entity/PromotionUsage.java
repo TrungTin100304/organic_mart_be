@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -39,8 +40,12 @@ public class PromotionUsage {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id")
     private Order order;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_request_id", unique = true)
+    private PaymentRequest paymentRequest;
 
     @CreationTimestamp
     @Column(name = "used_at", nullable = false, updatable = false)

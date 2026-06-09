@@ -1,12 +1,18 @@
 package com.bryan.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import com.bryan.entity.DeliveryMethod;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+
+import java.time.LocalDate;
 
 public record VietQrPaymentRequest(
-    @NotNull Long addressId,
-    @NotBlank
-    @Pattern(regexp = "STANDARD|EXPRESS", message = "shippingMethod must be STANDARD or EXPRESS")
-    String shippingMethod
+    @NotNull(message = "addressId is required")
+    Long addressId,
+
+    @NotNull(message = "deliveryMethod is required")
+    DeliveryMethod deliveryMethod,
+
+    LocalDate deliveryDate,
+
+    Long deliverySlotId
 ) {}

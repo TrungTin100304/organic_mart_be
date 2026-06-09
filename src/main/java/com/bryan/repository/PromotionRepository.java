@@ -22,4 +22,14 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
             LocalDate validDate1, LocalDate validDate2, Integer timesUsed);
 
     boolean existsByCode(String code);
+
+    boolean existsByCodeAndIdNot(String code, Long id);
+
+    List<Promotion> findAllByOrderByCreatedAtDesc();
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Promotion p WHERE p.code = :code")
+    java.util.Optional<Promotion> findByCodeForUpdate(@org.springframework.data.repository.query.Param("code") String code);
+
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Promotion p WHERE p.id = :id")
+    java.util.Optional<Promotion> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 }

@@ -1,22 +1,15 @@
 package com.bryan.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -69,4 +62,47 @@ public class PaymentRequest {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    private Order order;
+
+    @Column(name = "payment_items_snapshot", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String paymentItemsSnapshot;
+
+    // Internal delivery fields
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_method", length = 20)
+    private DeliveryMethod deliveryMethod;
+
+    @Column(name = "delivery_date")
+    private LocalDate deliveryDate;
+
+    @Column(name = "delivery_slot_id")
+    private Long deliverySlotId;
+
+    @Column(name = "delivery_slot_snapshot", length = 100)
+    private String deliverySlotSnapshot;
+
+    @Column(name = "building_code_snapshot", length = 20)
+    private String buildingCodeSnapshot;
+
+    @Column(name = "building_name_snapshot", length = 200)
+    private String buildingNameSnapshot;
+
+    @Column(name = "floor_snapshot", length = 20)
+    private String floorSnapshot;
+
+    @Column(name = "apartment_number_snapshot", length = 20)
+    private String apartmentNumberSnapshot;
+
+    @Column(name = "recipient_name_snapshot", length = 100)
+    private String recipientNameSnapshot;
+
+    @Column(name = "recipient_phone_snapshot", length = 20)
+    private String recipientPhoneSnapshot;
+
+    @Column(name = "delivery_note_snapshot", columnDefinition = "TEXT")
+    private String deliveryNoteSnapshot;
 }
