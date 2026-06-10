@@ -55,7 +55,7 @@ public class UserServiceImpl implements UserService {
         userMapper.updateUser(request, user);
 
         if (request.avatar() != null && !request.avatar().isEmpty()) {
-            String avatarUrl = fileUploadService.uploadFile(request.avatar());
+            String avatarUrl = fileUploadService.uploadFile(request.avatar(), "organic-mart/avatars");
             user.setAvatarUrl(avatarUrl);
         }
 
@@ -70,7 +70,7 @@ public class UserServiceImpl implements UserService {
                 .ifPresent(user::setActive);
 
         if (request.avatar() != null && !request.avatar().isEmpty()) {
-            String avatarUrl = fileUploadService.uploadFile(request.avatar());
+            String avatarUrl = fileUploadService.uploadFile(request.avatar(), "organic-mart/avatars");
             user.setAvatarUrl(avatarUrl);
         }
 

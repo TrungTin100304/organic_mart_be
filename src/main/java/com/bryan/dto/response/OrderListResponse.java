@@ -2,6 +2,7 @@ package com.bryan.dto.response;
 
 import com.bryan.entity.Order;
 import com.bryan.entity.OrderStatus;
+import com.bryan.entity.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ public record OrderListResponse(
     Long userId,
     String userFullName,
     OrderStatus status,
+    PaymentMethod paymentMethod,
     BigDecimal totalAmount,
     int itemCount,
     LocalDateTime createdAt,
@@ -24,6 +26,7 @@ public record OrderListResponse(
             order.getUser() != null ? order.getUser().getId() : null,
             order.getUser() != null ? order.getUser().getFullName() : null,
             order.getStatus(),
+            order.getPaymentMethod(),
             order.getTotalAmount(),
             order.getDetails() != null ? order.getDetails().size() : 0,
             order.getCreatedAt(),

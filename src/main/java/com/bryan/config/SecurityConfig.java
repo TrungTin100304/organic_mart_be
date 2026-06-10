@@ -2,10 +2,13 @@ package com.bryan.config;
 
 import com.bryan.filter.JwtAuthFilter;
 import com.bryan.service.impl.CustomUserDetailsServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -15,16 +18,20 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -55,11 +62,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/product-categories/**",
-                                "/api/v1/farms"
+                                "/api/v1/farms",
+                                "/api/v1/residential-buildings/active"
                         ).permitAll()
+                        .requestMatchers("/api/sepay/webhook").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler())
+                )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -98,5 +111,37 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
 
         return source;
+    }
+
+    @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("success", false);
+            body.put("statusCode", 401);
+            body.put("message", "Vui lòng đăng nhập để tiếp tục.");
+
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.writeValue(response.getOutputStream(), body);
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("success", false);
+            body.put("statusCode", 403);
+            body.put("message", "Bạn không có quyền thực hiện thao tác này.");
+
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.writeValue(response.getOutputStream(), body);
+        };
     }
 }

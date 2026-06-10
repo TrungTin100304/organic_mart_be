@@ -8,6 +8,7 @@ import com.bryan.service.InventoryBatchService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,16 +36,19 @@ public class InventoryBatchController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<InventoryBatchResponse>> createBatch(@Valid @RequestBody InventoryBatchRequest request) {
         return ApiResponse.success(201, inventoryBatchService.createBatch(request));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<InventoryBatchResponse>> updateBatch(@PathVariable Long id, @Valid @RequestBody InventoryBatchRequest request) {
         return ApiResponse.success(inventoryBatchService.updateBatch(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteBatch(@PathVariable Long id) {
         inventoryBatchService.deleteBatch(id);
         return ApiResponse.success(null, "Inventory batch deleted successfully");

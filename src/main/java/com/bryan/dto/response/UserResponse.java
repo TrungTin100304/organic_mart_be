@@ -1,6 +1,9 @@
 package com.bryan.dto.response;
 
 import com.bryan.entity.Role;
+import com.bryan.entity.DietType;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public record UserResponse(
@@ -12,6 +15,13 @@ public record UserResponse(
     boolean isActive,
     Role role,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    // Preference fields
+    BigDecimal heightCm,
+    BigDecimal weightKg,
+    BigDecimal bmi,
+    String healthGoal,
+    DietType dietType,
+    Integer dailyCalorieTarget
 ) {}
 

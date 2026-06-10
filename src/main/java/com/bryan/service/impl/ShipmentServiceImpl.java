@@ -97,8 +97,8 @@ public class ShipmentServiceImpl implements ShipmentService {
         Order order = orderRepository.findById(request.orderId())
             .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + request.orderId()));
 
-        if (order.getStatus() != OrderStatus.PROCESSING) {
-            throw new BadRequestException("Cannot create shipment for order with status: " + order.getStatus() + ". Order must be in PROCESSING status.");
+        if (order.getStatus() != OrderStatus.PREPARING) {
+            throw new BadRequestException("Cannot create shipment for order with status: " + order.getStatus() + ". Order must be in PREPARING status.");
         }
 
         ShippingProvider provider = providerRepository.findById(request.providerId())
@@ -314,12 +314,12 @@ public class ShipmentServiceImpl implements ShipmentService {
         if (shipmentStatus == ShipmentStatus.PICKED_UP ||
             shipmentStatus == ShipmentStatus.IN_TRANSIT ||
             shipmentStatus == ShipmentStatus.OUT_FOR_DELIVERY) {
-            if (fromStatus == OrderStatus.PROCESSING) {
-                order.setStatus(OrderStatus.SHIPPED);
+            if (fromStatus == OrderStatus.READY_FOR_DELIVERY) {
+                order.setStatus(OrderStatus.DELIVERING);
                 shouldUpdate = true;
             }
         } else if (shipmentStatus == ShipmentStatus.DELIVERED) {
-            if (fromStatus == OrderStatus.SHIPPED) {
+            if (fromStatus == OrderStatus.DELIVERING) {
                 order.setStatus(OrderStatus.DELIVERED);
                 shouldUpdate = true;
             }
