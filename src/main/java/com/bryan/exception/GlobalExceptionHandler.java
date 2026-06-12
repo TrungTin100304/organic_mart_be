@@ -56,6 +56,11 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(504, "Máy chủ AI đang quá tải. Vui lòng thử lại sau vài phút.");
     }
 
+    @ExceptionHandler(AiQuotaExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAiQuotaExceededException(AiQuotaExceededException ex) {
+        return ApiResponse.error(429, ex.getMessage());
+    }
+
     @ExceptionHandler(MealPlanRateLimitException.class)
     public ResponseEntity<ApiResponse<Void>> handleRateLimitException(MealPlanRateLimitException ex) {
         return ApiResponse.error(429, ex.getMessage());

@@ -5,6 +5,7 @@ import com.bryan.dto.request.AiDayPlan;
 import com.bryan.dto.request.AiMeal;
 import com.bryan.dto.request.AiMealRequest;
 import com.bryan.dto.request.AiMealResponse;
+import com.bryan.exception.AiQuotaExceededException;
 import com.bryan.exception.AiResponseParseException;
 import com.bryan.exception.AiTimeoutException;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,13 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
     private final ObjectMapper objectMapper;
 
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+    private static final String DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+    private static final Set<String> RETIRED_GEMINI_MODELS = Set.of(
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-001",
+            "gemini-2.0-flash-lite",
+            "gemini-2.0-flash-lite-001"
+    );
 
     @Override
     public AiMealResponse generateMealPlan(AiMealRequest request) {
@@ -38,7 +47,15 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
             throw new AiTimeoutException("Gemini API key is not configured. Please set GEMINI_API_KEY environment variable.");
         }
 
-        String model = geminiProperties.getModel();
+        String configuredModel = geminiProperties.getModel();
+        String model = configuredModel == null
+                || configuredModel.isBlank()
+                || RETIRED_GEMINI_MODELS.contains(configuredModel)
+                ? DEFAULT_GEMINI_MODEL
+                : configuredModel;
+        if (!model.equals(configuredModel)) {
+            log.warn("Configured Gemini model '{}' is unavailable; using '{}'.", configuredModel, model);
+        }
         String url = String.format(GEMINI_API_URL, model) + "?key=" + geminiProperties.getApiKey();
 
         String prompt = buildPrompt(request);
@@ -75,6 +92,11 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
                 if (attempt == retries) throw ex;
             } catch (HttpClientErrorException ex) {
                 log.error("Gemini API client error: {}", ex.getMessage());
+                if (ex.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                    throw new AiQuotaExceededException(
+                            "Dịch vụ tạo thực đơn AI đã hết hạn mức sử dụng. Vui lòng thử lại sau hoặc liên hệ quản trị viên."
+                    );
+                }
                 throw new AiTimeoutException("Gemini API rejected the request: " + ex.getMessage());
             } catch (HttpServerErrorException ex) {
                 log.error("Gemini API server error: {}", ex.getMessage());
@@ -95,6 +117,8 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
             );
             return response.getBody();
         } catch (ResourceAccessException ex) {
+            throw ex;
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
             throw ex;
         } catch (Exception ex) {
             throw new RuntimeException("Failed to call Gemini API: " + ex.getMessage(), ex);
