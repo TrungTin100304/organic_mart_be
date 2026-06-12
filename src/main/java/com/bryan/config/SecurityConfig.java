@@ -3,8 +3,12 @@ package com.bryan.config;
 import com.bryan.filter.JwtAuthFilter;
 import com.bryan.service.impl.CustomUserDetailsServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,15 +22,15 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.LinkedHashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +42,9 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomUserDetailsServiceImpl userDetailsService;
+
+    @Value("${cors.allowed-origin-patterns:http://localhost:*,http://127.0.0.1:*,https://*.vercel.app}")
+    private String allowedOriginPatterns;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -92,25 +99,39 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
-                "https://*.vercel.app",
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        ));
+        config.setAllowedOriginPatterns(parseAllowedOriginPatterns(allowedOriginPatterns));
 
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
 
         config.setAllowedHeaders(List.of("*"));
+
+        // Allow credentials for auth headers
         config.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+        // Cache preflight for 1 hour (3600 seconds) so browser doesn't re-OPTIONS on every request
+        config.setMaxAge(3600L);
 
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
         return source;
+    }
+
+    static List<String> parseAllowedOriginPatterns(String configuredPatterns) {
+        if (configuredPatterns == null || configuredPatterns.isBlank()) {
+            return List.of("http://localhost:*", "http://127.0.0.1:*", "https://*.vercel.app");
+        }
+
+        List<String> patterns = Arrays.stream(configuredPatterns.split(","))
+                .map(String::trim)
+                .filter(pattern -> !pattern.isEmpty())
+                .toList();
+
+        return patterns.isEmpty()
+                ? List.of("http://localhost:*", "http://127.0.0.1:*", "https://*.vercel.app")
+                : patterns;
     }
 
     @Bean
@@ -119,7 +140,7 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-            Map<String, Object> body = new LinkedHashMap<>();
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
             body.put("success", false);
             body.put("statusCode", 401);
             body.put("message", "Vui lòng đăng nhập để tiếp tục.");
@@ -135,7 +156,7 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-            Map<String, Object> body = new LinkedHashMap<>();
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
             body.put("success", false);
             body.put("statusCode", 403);
             body.put("message", "Bạn không có quyền thực hiện thao tác này.");
