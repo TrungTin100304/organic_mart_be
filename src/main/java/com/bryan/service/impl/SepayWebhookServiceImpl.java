@@ -48,20 +48,23 @@ public class SepayWebhookServiceImpl implements SepayWebhookService {
         // ── Idempotency: already processed this SePay transaction? ──
         Optional<SepayWebhookEvent> existingEvent = webhookEventRepository
             .findBySepayTransactionId(txnId);
-        if (existingEvent.isPresent()) {
+        if (existingEvent.isPresent()
+            && existingEvent.get().getStatus() != EventStatus.REJECTED) {
             log.info("Sepay webhook idempotent hit: txnId={}, status={}",
                 txnId, existingEvent.get().getStatus());
             return SepayWebhookResponse.ok();
         }
 
         // ── Save event as RECEIVED first (prevents concurrent processing) ──
-        SepayWebhookEvent event = new SepayWebhookEvent();
+        SepayWebhookEvent event = existingEvent.orElseGet(SepayWebhookEvent::new);
         event.setSepayTransactionId(txnId);
         event.setTransferAmount(request.transferAmount());
         event.setAccountNumber(request.accountNumber());
         event.setTransferType(request.transferType());
         event.setGateway(request.gateway());
         event.setStatus(EventStatus.RECEIVED);
+        event.setRejectionReason(null);
+        event.setProcessedAt(null);
         event = webhookEventRepository.save(event);
 
         // ── Only process credit (transfer in) ──
@@ -181,7 +184,10 @@ public class SepayWebhookServiceImpl implements SepayWebhookService {
         }
         // Priority 2: referenceCode field
         if (request.referenceCode() != null && !request.referenceCode().isBlank()) {
-            return extractCodeFromText(request.referenceCode().trim());
+            String transferCode = extractCodeFromText(request.referenceCode().trim());
+            if (transferCode != null) {
+                return transferCode;
+            }
         }
         // Priority 3: content field
         if (request.content() != null && !request.content().isBlank()) {

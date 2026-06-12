@@ -178,6 +178,22 @@ class SepayWebhookServiceImplTest {
             verify(payRepo).findByTransferCode(CODE2);
         }
 
+        @Test
+        @DisplayName("referenceCode without payment code -> falls back to content")
+        void referenceCodeWithoutPaymentCodeFallsBackToContent() {
+            SepayWebhookRequest r = new SepayWebhookRequest(
+                24L, "sepay", LocalDateTime.now(),
+                ACCOUNT, null, null, "bank transfer " + CODE2, "in",
+                "desc", new BigDecimal("100000"), BigDecimal.ZERO, "277V602261631487");
+            stubSave();
+            when(evRepo.findBySepayTransactionId(any())).thenReturn(Optional.empty());
+            when(payRepo.findByTransferCode(CODE2)).thenReturn(Optional.empty());
+
+            assertTrue(svc.handleWebhook(r, API_KEY).success());
+
+            verify(payRepo).findByTransferCode(CODE2);
+        }
+
         @Test @DisplayName("code field takes priority over referenceCode")
         void priority() {
             // code field set → used even if referenceCode also set
@@ -286,6 +302,23 @@ class SepayWebhookServiceImplTest {
             stubSave();
             assertTrue(svc.handleWebhook(r, API_KEY).success());
             verify(payRepo, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("rejected transaction -> can be retried after configuration or parsing fixes")
+        void retryRejectedTransaction() {
+            SepayWebhookEvent existing = new SepayWebhookEvent();
+            existing.setSepayTransactionId("42");
+            existing.setStatus(SepayWebhookEvent.EventStatus.REJECTED);
+            existing.setRejectionReason("code_not_found");
+            SepayWebhookRequest r = make(42L, CODE, "in");
+            when(evRepo.findBySepayTransactionId("42")).thenReturn(Optional.of(existing));
+            when(payRepo.findByTransferCode(CODE)).thenReturn(Optional.empty());
+            stubSave();
+
+            assertTrue(svc.handleWebhook(r, API_KEY).success());
+
+            verify(payRepo).findByTransferCode(CODE);
         }
 
         @Test @DisplayName("event saved for every received request")

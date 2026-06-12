@@ -1,5 +1,6 @@
 package com.bryan.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 
@@ -29,6 +30,7 @@ public record SepayWebhookRequest(
 
     String gateway,
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime transactionDate,
 
     @JsonProperty("accountNumber")
