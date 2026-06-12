@@ -14,4 +14,6 @@ public class GeminiProperties {
     private String model = "gemini-2.5-flash";
     private int timeoutSeconds = 60;
     private int maxRetries = 1;
+    private int maxOutputTokens = 32768;
+    private int thinkingBudget = 0;
 }

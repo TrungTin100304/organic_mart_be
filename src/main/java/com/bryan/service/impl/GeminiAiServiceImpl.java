@@ -19,9 +19,11 @@ import org.springframework.web.client.RestTemplate;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +42,7 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
             "gemini-2.0-flash-lite",
             "gemini-2.0-flash-lite-001"
     );
+    private static final Map<String, Object> MEAL_PLAN_RESPONSE_SCHEMA = mealPlanResponseSchema();
 
     @Override
     public AiMealResponse generateMealPlan(AiMealRequest request) {
@@ -60,16 +63,20 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
 
         String prompt = buildPrompt(request);
 
+        Map<String, Object> generationConfig = new LinkedHashMap<>();
+        generationConfig.put("temperature", 0.7);
+        generationConfig.put("topP", 0.9);
+        generationConfig.put("topK", 40);
+        generationConfig.put("maxOutputTokens", geminiProperties.getMaxOutputTokens());
+        generationConfig.put("responseMimeType", "application/json");
+        generationConfig.put("responseSchema", MEAL_PLAN_RESPONSE_SCHEMA);
+        generationConfig.put("thinkingConfig", Map.of("thinkingBudget", geminiProperties.getThinkingBudget()));
+
         Map<String, Object> requestBody = Map.of(
                 "contents", List.of(Map.of(
                         "parts", List.of(Map.of("text", prompt))
                 )),
-                "generationConfig", Map.of(
-                        "temperature", 0.7,
-                        "topP", 0.9,
-                        "topK", 40,
-                        "maxOutputTokens", 8192
-                )
+                "generationConfig", generationConfig
         );
 
         HttpHeaders headers = new HttpHeaders();
@@ -136,14 +143,25 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
             }
 
             Map<String, Object> candidate = candidates.get(0);
+            if ("MAX_TOKENS".equals(candidate.get("finishReason"))) {
+                throw new AiResponseParseException("Phản hồi từ Gemini bị cắt do vượt giới hạn nội dung.");
+            }
+
             Map<String, Object> content = (Map<String, Object>) candidate.get("content");
+            if (content == null) {
+                throw new AiResponseParseException("Gemini không trả về nội dung thực đơn.");
+            }
             List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
 
             if (parts == null || parts.isEmpty()) {
                 throw new AiResponseParseException("Empty response from Gemini AI.");
             }
 
-            String text = (String) parts.get(0).get("text");
+            String text = parts.stream()
+                    .map(part -> part.get("text"))
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .collect(Collectors.joining());
             if (text == null || text.isBlank()) {
                 throw new AiResponseParseException("No text content in Gemini response.");
             }
@@ -195,8 +213,56 @@ public class GeminiAiServiceImpl implements com.bryan.service.GeminiAiService {
         } catch (AiResponseParseException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new AiResponseParseException("Invalid JSON from AI: " + ex.getMessage(), ex);
+            log.warn("Unable to parse Gemini meal-plan response: {}", ex.getMessage());
+            throw new AiResponseParseException("Gemini trả về dữ liệu không hợp lệ hoặc chưa hoàn chỉnh.", ex);
         }
+    }
+
+    private static Map<String, Object> mealPlanResponseSchema() {
+        Map<String, Object> mealSchema = Map.of(
+                "type", "object",
+                "properties", Map.ofEntries(
+                        Map.entry("mealType", Map.of(
+                                "type", "string",
+                                "enum", List.of("BREAKFAST", "LUNCH", "DINNER", "SNACK")
+                        )),
+                        Map.entry("name", Map.of("type", "string")),
+                        Map.entry("description", Map.of("type", "string")),
+                        Map.entry("ingredients", Map.of(
+                                "type", "array",
+                                "items", Map.of("type", "string")
+                        )),
+                        Map.entry("cookingInstructions", Map.of("type", "string")),
+                        Map.entry("preparationMinutes", Map.of("type", "integer")),
+                        Map.entry("cookingMinutes", Map.of("type", "integer")),
+                        Map.entry("calories", Map.of("type", "integer")),
+                        Map.entry("proteinGrams", Map.of("type", "number")),
+                        Map.entry("carbsGrams", Map.of("type", "number")),
+                        Map.entry("fatGrams", Map.of("type", "number"))
+                ),
+                "required", List.of(
+                        "mealType", "name", "description", "ingredients", "cookingInstructions",
+                        "preparationMinutes", "cookingMinutes", "calories",
+                        "proteinGrams", "carbsGrams", "fatGrams"
+                )
+        );
+
+        Map<String, Object> daySchema = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "dayNumber", Map.of("type", "integer"),
+                        "meals", Map.of("type", "array", "items", mealSchema)
+                ),
+                "required", List.of("dayNumber", "meals")
+        );
+
+        return Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "days", Map.of("type", "array", "items", daySchema)
+                ),
+                "required", List.of("days")
+        );
     }
 
     private String buildPrompt(AiMealRequest request) {
