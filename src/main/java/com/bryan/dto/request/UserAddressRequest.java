@@ -1,36 +1,44 @@
 package com.bryan.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
+import com.bryan.entity.AddressLabel;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import com.bryan.entity.AddressLabel;
 
 public record UserAddressRequest(
-    @NotNull(message = "Nhãn là bắt buộc")
+    @NotNull(message = "Label is required")
     AddressLabel label,
 
-    @Size(max = 100, message = "Nhãn tùy chỉnh không được vượt quá 100 ký tự")
+    @Size(max = 100)
     String customLabel,
 
-    @NotBlank(message = "Tên người nhận là bắt buộc")
-    @Size(max = 100, message = "Tên người nhận không được vượt quá 100 ký tự")
+    @NotNull(message = "Recipient name is required")
+    @Size(max = 100)
     String recipientName,
 
-    @NotBlank(message = "Số điện thoại người nhận là bắt buộc")
-    @Size(max = 20, message = "Số điện thoại người nhận không được vượt quá 20 ký tự")
+    @NotNull(message = "Recipient phone is required")
+    @Size(max = 20)
     String recipientPhone,
 
-    @NotBlank(message = "Địa chỉ đầy đủ là bắt buộc")
     String fullAddress,
 
-    @Size(max = 100, message = "Phường/Xã không được vượt quá 100 ký tự")
+    @Size(max = 100)
     String ward,
 
-    @Size(max = 100, message = "Quận/Huyện không được vượt quá 100 ký tự")
+    @Size(max = 100)
     String district,
 
-    @Size(max = 100, message = "Thành phố/Tỉnh không được vượt quá 100 ký tự")
+    @Size(max = 100)
     String city,
 
-    boolean isDefault
+    boolean isDefault,
+
+    Long buildingId,
+
+    @Size(max = 20)
+    String floor,
+
+    @Size(max = 20)
+    String apartmentNumber,
+
+    String deliveryNote
 ) {}

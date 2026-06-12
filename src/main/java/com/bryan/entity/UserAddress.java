@@ -51,14 +51,22 @@ public class UserAddress {
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;
 
-    public boolean getIsDefault() {
-        return this.isDefault;
-    }
+    public boolean getIsDefault() { return this.isDefault; }
+    public void setIsDefault(boolean isDefault) { this.isDefault = isDefault; }
 
-    public void setIsDefault(boolean isDefault) {
-        this.isDefault = isDefault;
-    }
+    // Internal delivery fields
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "building_id")
+    private ResidentialBuilding building;
 
+    @Column(length = 20)
+    private String floor;
+
+    @Column(name = "apartment_number", length = 20)
+    private String apartmentNumber;
+
+    @Column(name = "delivery_note", columnDefinition = "TEXT")
+    private String deliveryNote;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
