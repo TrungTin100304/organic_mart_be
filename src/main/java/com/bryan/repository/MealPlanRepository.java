@@ -3,6 +3,7 @@ package com.bryan.repository;
 import com.bryan.entity.MealPlan;
 import com.bryan.entity.MealPlanStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,5 +24,7 @@ public interface MealPlanRepository extends JpaRepository<MealPlan, Long> {
     @Query("SELECT COUNT(mp) FROM MealPlan mp WHERE mp.user.id = :userId AND mp.status IN :statuses")
     long countByUserIdAndStatusIn(@Param("userId") Long userId, @Param("statuses") List<MealPlanStatus> statuses);
 
-    void deleteByIdAndUserId(Long id, Long userId);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "DELETE FROM meal_plan WHERE id = :id AND user_id = :userId", nativeQuery = true)
+    int deleteByIdAndUserId(@Param("id") Long id, @Param("userId") Long userId);
 }

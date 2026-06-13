@@ -57,23 +57,22 @@ class MealPlanServiceSecurityTest {
 
     @Test
     void shouldAllowUserToDeleteOwnMealPlan() {
-        com.bryan.entity.MealPlan plan = new com.bryan.entity.MealPlan();
-        plan.setId(1L);
-        plan.setUser(testUser);
-        when(mealPlanRepository.findByIdAndUserId(1L, 1L)).thenReturn(Optional.of(plan));
+        when(mealPlanRepository.deleteByIdAndUserId(1L, 1L)).thenReturn(1);
 
         assertDoesNotThrow(() -> mealPlanService.deleteMealPlan(1L, 1L));
-        verify(mealPlanRepository).delete(plan);
+        verify(mealPlanRepository).deleteByIdAndUserId(1L, 1L);
+        verify(mealPlanRepository, never()).delete(any());
     }
 
     @Test
     void shouldDenyUserFromDeletingAnotherUsersMealPlan() {
-        when(mealPlanRepository.findByIdAndUserId(1L, 2L)).thenReturn(Optional.empty());
+        when(mealPlanRepository.deleteByIdAndUserId(1L, 2L)).thenReturn(0);
 
         BadRequestException ex = assertThrows(BadRequestException.class,
                 () -> mealPlanService.deleteMealPlan(1L, 2L));
         assertNotNull(ex.getMessage());
         verify(mealPlanRepository, never()).delete(any());
+        verify(mealPlanRepository).deleteByIdAndUserId(1L, 2L);
     }
 
     @Test

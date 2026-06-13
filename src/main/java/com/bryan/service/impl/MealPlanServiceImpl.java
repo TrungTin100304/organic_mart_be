@@ -202,9 +202,10 @@ public class MealPlanServiceImpl implements MealPlanService {
 
     @Override
     public void deleteMealPlan(Long id, Long userId) {
-        MealPlan mealPlan = mealPlanRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new BadRequestException("Không tìm thấy thực đơn hoặc bạn không có quyền."));
-        mealPlanRepository.delete(mealPlan);
+        int deletedRows = mealPlanRepository.deleteByIdAndUserId(id, userId);
+        if (deletedRows == 0) {
+            throw new BadRequestException("Không tìm thấy thực đơn hoặc bạn không có quyền.");
+        }
     }
 
     @Override
