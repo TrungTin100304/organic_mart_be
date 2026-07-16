@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 public class VietQrProperties {
 
+    private boolean enabled;
     private String bankId;
     private String bankCode;
     private String accountNo;
@@ -20,6 +21,9 @@ public class VietQrProperties {
 
     @PostConstruct
     public void validate() {
+        if (!enabled) {
+            return;
+        }
         if (accountNo == null || accountNo.isBlank()) {
             throw new IllegalStateException("vietqr.account-no configuration is required for QR generation");
         }
