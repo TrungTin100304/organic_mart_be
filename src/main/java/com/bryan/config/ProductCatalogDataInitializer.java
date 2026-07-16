@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class ProductCatalogDataInitializer implements ApplicationRunner {
         Map<String, String> categoryMappings = categoryByProductSlug();
         Map<String, ProductCategory> categories = categoryRepository.findAll().stream()
                 .collect(Collectors.toMap(ProductCategory::getSlug, Function.identity()));
+        categories = ensureCatalogCategories(categories);
         validateCategories(categoryMappings, categories);
 
         Map<String, Product> productsBySlug = productRepository.findAll().stream()
@@ -151,6 +153,20 @@ public class ProductCatalogDataInitializer implements ApplicationRunner {
         );
     }
 
+    static List<CatalogCategorySeed> catalogCategories() {
+        return List.of(
+                categorySeed("Rau c\u1ee7 qu\u1ea3", "rau-cu-qua", null, 10),
+                categorySeed("Tr\u00e1i c\u00e2y", "trai-cay", null, 20),
+                categorySeed("N\u1ea5m", "nam", null, 30),
+                categorySeed("Gia v\u1ecb & nguy\u00ean v\u1eadt li\u1ec7u n\u1ea5u \u0103n", "gia-vi-nguyen-vat-lieu-nau-an", null, 40),
+                categorySeed("Rau \u0103n l\u00e1", "rau-an-la", "rau-cu-qua", 11),
+                categorySeed("Rau \u0103n c\u1ee7", "rau-an-cu", "rau-cu-qua", 12),
+                categorySeed("Rau \u0103n qu\u1ea3", "rau-an-qua", "rau-cu-qua", 13),
+                categorySeed("Rau gia v\u1ecb", "rau-gia-vi", "rau-cu-qua", 14),
+                categorySeed("Tr\u00e1i c\u00e2y trong n\u01b0\u1edbc", "trai-cay-trong-nuoc", "trai-cay", 21)
+        );
+    }
+
     static String inferUnit(String name, String slug) {
         if ("trung-ga-ta-sach-10-qua".equals(slug) || "trung-ga-ta".equals(slug)) {
             return "10 quả";
@@ -185,6 +201,52 @@ public class ProductCatalogDataInitializer implements ApplicationRunner {
             String imageUrl
     ) {
         return new AttachedProductSeed(slug, name, categorySlug, price, unit, imageUrl);
+    }
+
+    private static CatalogCategorySeed categorySeed(
+            String name,
+            String slug,
+            String parentSlug,
+            int sortOrder
+    ) {
+        return new CatalogCategorySeed(name, slug, parentSlug, sortOrder);
+    }
+
+    private Map<String, ProductCategory> ensureCatalogCategories(Map<String, ProductCategory> categories) {
+        Map<String, ProductCategory> updatedCategories = new LinkedHashMap<>(categories);
+        List<ProductCategory> missingCategories = new ArrayList<>();
+
+        for (CatalogCategorySeed seed : catalogCategories()) {
+            ProductCategory category = updatedCategories.get(seed.slug());
+            if (category == null) {
+                category = new ProductCategory();
+                category.setSlug(seed.slug());
+                updatedCategories.put(seed.slug(), category);
+                missingCategories.add(category);
+            }
+
+            ProductCategory parent = null;
+            if (seed.parentSlug() != null) {
+                parent = updatedCategories.get(seed.parentSlug());
+                if (parent == null) {
+                    throw new IllegalStateException("Missing parent product category: " + seed.parentSlug());
+                }
+            }
+
+            category.setName(seed.name());
+            category.setParent(parent);
+            category.setSortOrder(seed.sortOrder());
+        }
+
+        if (!missingCategories.isEmpty()) {
+            categoryRepository.saveAll(missingCategories);
+            log.info(
+                    "Created missing product categories: {}",
+                    missingCategories.stream().map(ProductCategory::getSlug).toList()
+            );
+        }
+
+        return updatedCategories;
     }
 
     private void validateCategories(
@@ -223,6 +285,14 @@ public class ProductCatalogDataInitializer implements ApplicationRunner {
             long price,
             String unit,
             String imageUrl
+    ) {
+    }
+
+    record CatalogCategorySeed(
+            String name,
+            String slug,
+            String parentSlug,
+            int sortOrder
     ) {
     }
 }
