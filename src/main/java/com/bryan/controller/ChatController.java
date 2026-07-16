@@ -30,7 +30,7 @@ public class ChatController {
     @GetMapping("/conversations/me")
     public ResponseEntity<ApiResponse<ChatConversationResponse>> getMyConversation(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        ChatConversationResponse conversation = chatService.getOrCreateConversation(userDetails.getId());
+        ChatConversationResponse conversation = chatService.getCurrentConversation(userDetails.getId());
         return ApiResponse.success(conversation);
     }
 

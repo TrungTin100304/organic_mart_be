@@ -30,7 +30,6 @@ public class ChatServiceImpl implements ChatService {
     private final UserRepository userRepository;
 
     @Override
-    @Transactional(readOnly = true)
     public ChatConversationResponse getOrCreateConversation(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
@@ -44,6 +43,15 @@ public class ChatServiceImpl implements ChatService {
                             .build();
                     return toConversationResponse(conversationRepository.save(conversation));
                 });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatConversationResponse getCurrentConversation(Long userId) {
+        ChatConversation conversation = conversationRepository.findByUserIdOrderByUpdatedAtDesc(userId)
+                .orElseThrow(() -> new NotFoundException("Conversation not found"));
+
+        return toConversationResponse(conversation);
     }
 
     @Override

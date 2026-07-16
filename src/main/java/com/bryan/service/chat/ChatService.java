@@ -9,6 +9,8 @@ public interface ChatService {
 
     ChatConversationResponse getOrCreateConversation(Long userId);
 
+    ChatConversationResponse getCurrentConversation(Long userId);
+
     ChatConversationResponse getConversationById(Long conversationId, Long userId);
 
     Page<ChatMessageResponse> getMessages(Long conversationId, Long userId, Pageable pageable);
