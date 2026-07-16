@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: organic-mart-be
+    runtime: docker
+    branch: master
+    region: singapore
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: organic-mart-db
+          property: connectionString
+      - key: SPRING_APPLICATION_NAME
+        value: organic-mart-be
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SERVER_PORT
+        value: "10000"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: SPRING_JPA_SHOW_SQL
+        value: "false"
+      - key: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+        value: org.hibernate.dialect.PostgreSQLDialect
+      - key: SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL
+        value: "false"
+      - key: SPRING_FLYWAY_ENABLED
+        value: "false"
+      - key: SPRING_FLYWAY_BASELINE_ON_MIGRATE
+        value: "false"
+      - key: SPRING_FLYWAY_VALIDATE_ON_MIGRATE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRATION
+        value: "86400000"
+      - key: JWT_REFRESH_TOKEN_EXPIRATION
+        value: "604800000"
+      - key: SPRING_MAIL_HOST
+        value: smtp.gmail.com
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: SPRING_MAIL_USERNAME
+        value: ""
+      - key: SPRING_MAIL_PASSWORD
+        value: ""
+      - key: SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH
+        value: "true"
+      - key: SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE
+        value: "true"
+      - key: CORS_ALLOWED_ORIGIN_PATTERNS
+        value: http://localhost:*,http://127.0.0.1:*,https://*.vercel.app
+
+databases:
+  - name: organic-mart-db
+    databaseName: organic_mart
+    user: organic_mart_user
+    region: singapore
+    plan: free
