@@ -73,6 +73,7 @@ public class SecurityConfig {
                                 "/api/v1/residential-buildings/active"
                         ).permitAll()
                         .requestMatchers("/api/sepay/webhook").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)

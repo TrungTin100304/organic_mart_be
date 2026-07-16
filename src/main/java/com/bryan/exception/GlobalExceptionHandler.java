@@ -71,6 +71,16 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(403, "Bạn không có quyền thực hiện thao tác này.");
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleForbiddenException(ForbiddenException ex) {
+        return ApiResponse.error(403, ex.getMessage());
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFoundException(NotFoundException ex) {
+        return ApiResponse.error(404, ex.getMessage());
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException ex) {
         return ApiResponse.error(401, "Vui lòng đăng nhập để tiếp tục.");
