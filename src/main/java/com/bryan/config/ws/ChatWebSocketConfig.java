@@ -18,6 +18,11 @@ public class ChatWebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(chatWebSocketHandler, "/ws/chat")
                 .addInterceptors(chatHandshakeInterceptor)
-                .setAllowedOrigins("*");
+                .setAllowedOriginPatterns(
+                        "http://localhost:*",
+                        "http://127.0.0.1:*",
+                        "https://*.vercel.app",
+                        "https://organic-mart-fe-bu3b.vercel.app"
+                );
     }
 }
