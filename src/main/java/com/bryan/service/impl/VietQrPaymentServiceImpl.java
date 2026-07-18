@@ -53,7 +53,18 @@ public class VietQrPaymentServiceImpl implements VietQrPaymentService {
 
     @Override
     public VietQrPaymentResponse createPayment(VietQrPaymentRequest request) {
-        validateConfiguration();
+        try {
+            validateConfiguration();
+        } catch (BadRequestException e) {
+            log.error(
+                "VietQR createPayment aborted - configuration invalid. bankId={}, accountNo={}, template={}, accountName={}",
+                safe(properties != null ? properties.getBankId() : null),
+                safe(properties != null ? properties.getAccountNo() : null),
+                safe(properties != null ? properties.getTemplate() : null),
+                safe(properties != null ? properties.getAccountName() : null)
+            );
+            throw e;
+        }
         User user = getAuthenticatedUser();
         UserAddress address = getOwnedAddress(request.addressId(), user);
         Cart cart = cartRepository.findByUserId(user.getId())
@@ -73,7 +84,14 @@ public class VietQrPaymentServiceImpl implements VietQrPaymentService {
         BigDecimal amount = subtotal.add(shippingFee);
 
         String transferCode = "OM" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(Locale.ROOT);
-        String qrUrl = buildQrUrl(amount, transferCode);
+        String qrUrl;
+        try {
+            qrUrl = buildQrUrl(amount, transferCode);
+        } catch (RuntimeException e) {
+            log.error("VietQR buildQrUrl failed for user={}, amount={}, transferCode={}",
+                user.getId(), amount.toPlainString(), transferCode, e);
+            throw e;
+        }
 
         String itemsSnapshot = snapshotCartItems(cart);
 
@@ -402,7 +420,7 @@ public class VietQrPaymentServiceImpl implements VietQrPaymentService {
             properties.getBankId(),
             properties.getAccountNo(),
             properties.getTemplate(),
-            amount.longValueExact(),
+            amount.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString(),
             transferCode
         );
         if (StringUtils.hasText(properties.getAccountName())) {
@@ -459,6 +477,10 @@ public class VietQrPaymentServiceImpl implements VietQrPaymentService {
             log.error("Failed to serialize cart items snapshot", e);
             return "[]";
         }
+    }
+
+    private static String safe(String value) {
+        return value == null ? "<null>" : value;
     }
 
     List<PaymentItemSnapshot> deserializeSnapshot(String snapshot) {
