@@ -86,12 +86,17 @@ public class ChatServiceImpl implements ChatService {
         ChatConversation conversation = conversationRepository.findByIdWithUser(conversationId)
                 .orElseThrow(() -> new NotFoundException("Conversation not found"));
 
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        boolean isAdmin = sender.getRole() == com.bryan.entity.Role.ROLE_ADMIN;
+        if (!isAdmin && !conversation.getUser().getId().equals(senderId)) {
+            throw new ForbiddenException("You do not have access to this conversation");
+        }
+
         if (conversation.getStatus() == ChatConversationStatus.CLOSED) {
             throw new ForbiddenException("Cannot send message to a closed conversation");
         }
-
-        User sender = userRepository.findById(senderId)
-                .orElseThrow(() -> new NotFoundException("User not found"));
 
         if (messageRepository.existsByConversationIdAndClientMessageId(conversationId, clientMessageId)) {
             log.debug("Duplicate message detected: conversationId={}, clientMessageId={}", conversationId, clientMessageId);
@@ -100,7 +105,7 @@ public class ChatServiceImpl implements ChatService {
                     .orElseThrow();
         }
 
-        ChatMessageSenderRole senderRole = sender.getRole() == com.bryan.entity.Role.ROLE_ADMIN
+        ChatMessageSenderRole senderRole = isAdmin
                 ? ChatMessageSenderRole.ADMIN
                 : ChatMessageSenderRole.USER;
 

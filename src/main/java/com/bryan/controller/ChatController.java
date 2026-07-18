@@ -1,10 +1,12 @@
 package com.bryan.controller;
 
+import com.bryan.dto.request.chat.SendChatMessageRequest;
 import com.bryan.dto.response.ApiResponse;
 import com.bryan.dto.response.chat.ChatConversationResponse;
 import com.bryan.dto.response.chat.ChatMessageResponse;
 import com.bryan.security.CustomUserDetails;
 import com.bryan.service.chat.ChatService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +45,19 @@ public class ChatController {
         Pageable pageable = PageRequest.of(page, Math.min(size, 100));
         Page<ChatMessageResponse> messages = chatService.getMessages(id, userDetails.getId(), pageable);
         return ApiResponse.success(messages);
+    }
+
+    @PostMapping("/conversations/{id}/messages")
+    public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
+            @PathVariable Long id,
+            @Valid @RequestBody SendChatMessageRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        ChatMessageResponse message = chatService.sendMessage(
+                id,
+                userDetails.getId(),
+                request.content(),
+                request.clientMessageId());
+        return ApiResponse.success(message);
     }
 
     @PatchMapping("/conversations/{id}/read")
